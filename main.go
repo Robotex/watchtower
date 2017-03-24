@@ -27,6 +27,7 @@ var (
 	scheduleSpec string
 	cleanup      bool
 	noRestart    bool
+	timeout		 int
 )
 
 func init() {
@@ -78,6 +79,12 @@ func main() {
 			Usage:  "use TLS and verify the remote",
 			EnvVar: "DOCKER_TLS_VERIFY",
 		},
+		cli.IntFlag{
+			Name:	"timeout",
+			Usage:	"timeout before container is forcefully stopped",
+			Value:	10,
+			EnvVar:	"WATCHTOWER_TIMEOUT",
+		},
 		cli.BoolFlag{
 			Name:  "debug",
 			Usage: "enable debug mode with verbose logging",
@@ -107,6 +114,7 @@ func before(c *cli.Context) error {
 
 	cleanup = c.GlobalBool("cleanup")
 	noRestart = c.GlobalBool("no-restart")
+	timeout = c.GlobalInt("timeout")
 
 	// configure environment vars for client
 	err := envConfig(c)
@@ -135,7 +143,7 @@ func start(c *cli.Context) error {
 			select {
 			case v := <-tryLockSem:
 				defer func() { tryLockSem <- v }()
-				if err := actions.Update(client, names, cleanup, noRestart); err != nil {
+				if err := actions.Update(client, names, cleanup, noRestart, timeout); err != nil {
 					fmt.Println(err)
 				}
 			default:
